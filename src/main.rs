@@ -1,39 +1,37 @@
 use std::fs::File;
-use std::io::BufReader;
-use std::io::{self, Read};
+use std::io::{self, BufRead, BufReader};
+use std::result;
 
 const FILE_PATH: &str = "./rust_search_practice.txt";
 
 fn main() -> io::Result<()> {
-    let f = File::open(FILE_PATH).expect("File not found!");
+    let f = File::open(FILE_PATH)?;
     let mut pattern = String::new();
-    let mut contents = String::new();
-    let mut reader = BufReader::new(f);
-
-    reader
-        .read_to_string(&mut contents)
-        .expect("Unable to load contents.");
+    let reader = BufReader::new(f);
 
     println!("Enter search term:");
-    io::stdin()
-        .read_line(&mut pattern)
-        .expect("Pattern not valid.");
+    io::stdin().read_line(&mut pattern)?;
 
     let clean_pattern = pattern.trim();
 
-    search(&contents, clean_pattern);
+    let matching_lines = search(reader, clean_pattern)?;
+
+    for result in matching_lines {
+        let line = result;
+        println!("{line}")
+    }
 
     Ok(())
 }
 
-// fn read_file() -> String {
-//     fs::read_to_string(FILE_PATH).expect("Unable to read file.")
-// }
-
-fn search(contents: &str, pattern: &str) {
-    for line in contents.lines() {
+fn search<R: BufRead>(reader: R, pattern: &str) -> io::Result<Vec<String>> {
+    let mut matching_lines: Vec<String> = Vec::new();
+    for line in reader.lines() {
+        let line = line?;
         if line.contains(pattern) {
-            println!("{line}")
+            matching_lines.push(line);
         }
     }
+
+    Ok((matching_lines))
 }
