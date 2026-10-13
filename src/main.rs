@@ -1,20 +1,22 @@
+use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::result;
-
-const FILE_PATH: &str = "./rust_search_practice.txt";
 
 fn main() -> io::Result<()> {
-    let f = File::open(FILE_PATH)?;
-    let mut pattern = String::new();
-    let reader = BufReader::new(f);
+    let args: Vec<String> = env::args().collect();
 
-    println!("Enter search term:");
-    io::stdin().read_line(&mut pattern)?;
+    let query = args
+        .get(1)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing search query"))?;
 
-    let clean_pattern = pattern.trim();
+    let filename = args
+        .get(2)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing filepath"))?;
 
-    let matching_lines = search(reader, clean_pattern)?;
+    let file = File::open(filename)?;
+    let reader = BufReader::new(file);
+
+    let matching_lines = search(reader, query)?;
 
     for result in matching_lines {
         let line = result;
@@ -24,14 +26,30 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn search<R: BufRead>(reader: R, pattern: &str) -> io::Result<Vec<String>> {
+fn search<R: BufRead>(reader: R, query: &String) -> io::Result<Vec<String>> {
     let mut matching_lines: Vec<String> = Vec::new();
     for line in reader.lines() {
         let line = line?;
-        if line.contains(pattern) {
+        if line.contains(query) {
             matching_lines.push(line);
         }
     }
 
-    Ok((matching_lines))
+    Ok(matching_lines)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn finds_matching_lines() {
+        let input = "hello rust\ngoodbye world\nhello again";
+        let reader = Cursor::new(input);
+
+        let results = search(reader, "hello").unwrap();
+
+        assert_eq!(results.len(), 2);
+    }
 }
